@@ -4,6 +4,6 @@
   "version": "0.1.0",
   "description": "Vendor install wrapper for OpenClaw runtime.",
   "dependencies": {
-    "openclaw": "latest"
+    "openclaw": "^2026.3.13"
   }
 }
