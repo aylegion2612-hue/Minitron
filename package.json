@@ -1,0 +1,52 @@
+{
+  "name": "minitron",
+  "version": "0.1.0",
+  "private": true,
+  "author": "Minitron Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aylegion2612-hue/Minitron.git"
+  },
+  "description": "Local-first AI desktop OS wrapping OpenClaw.",
+  "main": "dist/app/app/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "npm run build:core && npm run build:app",
+    "build:core": "tsc -p tsconfig.core.json",
+    "build:app": "tsc -p tsconfig.app.json",
+    "build:skills-registry": "node scripts/build-skills-registry.js",
+    "setup:openclaw": "npm --prefix vendor/openclaw install",
+    "dist": "npm run build && electron-builder --config electron-builder.yml --publish never",
+    "release:ci": "npm run build && electron-builder --config electron-builder.yml",
+    "test:e2e": "node scripts/e2e-install-to-chat.js",
+    "perf:audit": "node scripts/perf-audit.js",
+    "release:check": "node scripts/release-ready-check.js",
+    "typecheck": "npm run build",
+    "dev:core": "tsx watch core/index.ts"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "cors": "^2.8.5",
+    "electron-updater": "^6.3.9",
+    "express": "^4.21.2",
+    "i18next": "^25.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": "^15.4.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@types/ws": "^8.18.1",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

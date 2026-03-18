@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Minitron - Download</title>
+    <style>
+      body { font-family: ui-sans-serif, system-ui, sans-serif; background: #0b1020; color: #e5e7eb; margin: 0; }
+      .wrap { max-width: 860px; margin: 48px auto; padding: 0 20px; }
+      .card { background: #131a2e; border: 1px solid #283252; border-radius: 14px; padding: 20px; margin-top: 20px; }
+      .btn { display: inline-block; background: #2563eb; color: #fff; text-decoration: none; padding: 12px 16px; border-radius: 10px; font-weight: 600; }
+      .muted { color: #9ca3af; font-size: 14px; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Minitron</h1>
+      <p class="muted">Local-first AI desktop OS. Download the recommended installer for your platform.</p>
+      <section class="card">
+        <p id="detected" class="muted">Detecting your OS...</p>
+        <a id="downloadBtn" class="btn" href="#" aria-disabled="true">Download</a>
+        <p class="muted">If detection fails, use manual links below.</p>
+      </section>
+      <section class="card">
+        <h3>Manual Downloads</h3>
+        <p><a id="winLink" class="btn" href="#">Windows (.exe)</a></p>
+        <p><a id="macLink" class="btn" href="#">macOS (.dmg)</a></p>
+        <p><a id="linuxLink" class="btn" href="#">Linux (.AppImage)</a></p>
+        <p class="muted mono">Set your repository in <code>landing/landing-config.js</code>.</p>
+      </section>
+    </main>
+    <script src="./landing-config.js"></script>
+    <script>
+      const repo = window.MINITRON_REPO || "owner/repo";
+      const latestBase = `https://github.com/${repo}/releases/latest/download`;
+      const assets = {
+        windows: `${latestBase}/Minitron-Setup-latest.exe`,
+        mac: `${latestBase}/Minitron-latest.dmg`,
+        linux: `${latestBase}/Minitron-latest.AppImage`,
+      };
+
+      const ua = navigator.userAgent.toLowerCase();
+      const os = ua.includes("win") ? "windows" : ua.includes("mac") ? "mac" : "linux";
+      const pretty = os === "windows" ? "Windows" : os === "mac" ? "macOS" : "Linux";
+
+      document.getElementById("detected").textContent = `Detected OS: ${pretty}`;
+      const btn = document.getElementById("downloadBtn");
+      btn.href = assets[os];
+      btn.textContent = `Download for ${pretty}`;
+      btn.removeAttribute("aria-disabled");
+
+      document.getElementById("winLink").href = assets.windows;
+      document.getElementById("macLink").href = assets.mac;
+      document.getElementById("linuxLink").href = assets.linux;
+    </script>
+  </body>
+  </html>

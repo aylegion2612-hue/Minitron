@@ -1,0 +1,28 @@
+appId: com.minitron.desktop
+productName: Minitron
+directories:
+  output: release
+files:
+  - dist/**/*
+  - app/index.html
+  - package.json
+  - sidecars/**/*
+  - data/workspace/**/*
+asar: true
+publish:
+  - provider: github
+    releaseType: release
+win:
+  signAndEditExecutable: false
+  target:
+    - target: nsis
+      arch:
+        - x64
+mac:
+  target:
+    - dmg
+linux:
+  target:
+    - AppImage
+extraMetadata:
+  main: dist/app/app/main.js

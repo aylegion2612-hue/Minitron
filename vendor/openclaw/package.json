@@ -1,0 +1,9 @@
+{
+  "name": "minitron-openclaw-vendor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Vendor install wrapper for OpenClaw runtime.",
+  "dependencies": {
+    "openclaw": "latest"
+  }
+}

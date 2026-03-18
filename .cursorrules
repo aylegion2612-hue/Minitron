@@ -1,0 +1,33 @@
+# Minitron - Cursor Rules
+
+## Project
+Electron + React + TypeScript desktop app wrapping OpenClaw through a local Express control layer.
+
+## Always
+- Use strict TypeScript
+- Use Zod for API input validation
+- Catch and handle async failures
+- Route all renderer requests through `/core` APIs
+- Encrypt API keys with AES-256-GCM before persistence
+- Log user actions to audit history
+- Put every UI string in i18n files first
+
+## Never
+- Modify `/vendor/openclaw/`
+- Connect renderer directly to OpenClaw WebSocket
+- Rebuild OpenClaw channels/routing/session runtime
+- Rebuild Cognee in Node.js
+- Hardcode UI strings
+- Use `any` unless absolutely unavoidable
+
+## i18n
+- Mandatory from day 1 via react-i18next
+- Key format: `namespace.category.item`
+- Start in English and expand language files incrementally
+- Handle RTL languages by setting `document.documentElement.dir`
+
+## Security
+- Sanitize and validate all inputs
+- Validate paths against workspace root
+- Never log secrets
+- Support sandboxed execution for untrusted tasks

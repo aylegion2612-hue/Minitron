@@ -1,0 +1,31 @@
+{
+  "skills": [
+    {
+      "slug": "calendar-assistant",
+      "name": "Calendar Assistant",
+      "category": "productivity",
+      "description": "Schedule events and manage availability.",
+      "version": "1.0.0",
+      "sourceUrl": "https://github.com/VoltAgent/awesome-openclaw-skills",
+      "changelog": "Initial release."
+    },
+    {
+      "slug": "github-review-helper",
+      "name": "GitHub Review Helper",
+      "category": "development",
+      "description": "Summarize pull requests and draft review notes.",
+      "version": "1.1.0",
+      "sourceUrl": "https://github.com/VoltAgent/awesome-openclaw-skills",
+      "changelog": "Added repository filtering."
+    },
+    {
+      "slug": "notion-sync",
+      "name": "Notion Sync",
+      "category": "knowledge",
+      "description": "Sync notes and search workspace pages.",
+      "version": "2.0.0",
+      "sourceUrl": "https://github.com/VoltAgent/awesome-openclaw-skills",
+      "changelog": "Faster search indexing."
+    }
+  ]
+}
