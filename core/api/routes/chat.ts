@@ -120,7 +120,7 @@ router.post("/", async (req, res) => {
   res.on("close", onClose);
 
   let assistantContent = "";
-  for await (const chunk of gateway.sendMessageStream(sessionId, content)) {
+  for await (const chunk of gateway.sendMessage(sessionId, content)) {
     if (clientClosed) {
       break;
     }

@@ -1,3 +1,6 @@
+import { spawn } from "node:child_process";
+import path from "node:path";
+
 type StreamChunk = {
   text: string;
   done?: boolean;
@@ -11,6 +14,7 @@ type GatewayMessage =
 export class OpenClawGateway {
   private readonly endpoint: string;
   private healthy = false;
+  private connected = false;
 
   constructor(endpoint = "ws://127.0.0.1:18789") {
     this.endpoint = endpoint;
@@ -20,10 +24,20 @@ export class OpenClawGateway {
     return this.endpoint;
   }
 
-  async *sendMessageStream(sessionId: string, content: string): AsyncGenerator<StreamChunk> {
-    const liveGatewayEnabled = process.env.MINITRON_OPENCLAW_LIVE === "1";
+  isConnected(): boolean {
+    return this.connected;
+  }
 
-    if (liveGatewayEnabled && (await this.healthCheck())) {
+  async *sendMessage(sessionId: string, content: string): AsyncGenerator<StreamChunk> {
+    yield* this.sendMessageStream(sessionId, content);
+  }
+
+  async *sendMessageStream(sessionId: string, content: string): AsyncGenerator<StreamChunk> {
+    // Always attempt live gateway first; only fallback when unreachable/failed.
+    let wsAttempted = false;
+    if (await this.healthCheck()) {
+      wsAttempted = true;
+      this.log(`connected=${this.connected} endpoint=${this.endpoint}`);
       try {
         let yielded = false;
         for await (const msg of this.sendGatewayRequest(sessionId, content)) {
@@ -36,6 +50,7 @@ export class OpenClawGateway {
             return;
           }
           if (msg.type === "error") {
+            this.log(`gateway-stream-error: ${msg.message}`);
             break;
           }
         }
@@ -44,20 +59,38 @@ export class OpenClawGateway {
           yield { text: "", done: true };
           return;
         }
-      } catch {
-        // Use local fallback below.
+      } catch (error) {
+        this.log(`gateway-request-failed: ${error instanceof Error ? error.message : "unknown"}`);
       }
+    } else {
+      this.log(`gateway-unreachable: ${this.endpoint}`);
     }
 
-    // Deterministic local fallback for offline/dev-first behavior.
-    const synthetic = `Minitron received: ${content}`;
-    const words = synthetic.split(" ");
+    // Secondary live path: call OpenClaw agent CLI against the gateway session.
+    // This still uses OpenClaw runtime and avoids fake synthetic output.
+    const cli = await this.sendViaCli(sessionId, content);
+    if (cli.ok && cli.text.trim().length > 0) {
+      yield { text: cli.text.trim() };
+      yield { text: "", done: true };
+      return;
+    }
+    if (cli.error) {
+      yield { text: cli.error.trim() };
+      yield { text: "", done: true };
+      return;
+    }
 
-    for (const word of words) {
+    // Deterministic local fallback only when live gateway request is unavailable.
+    if (wsAttempted) {
+      this.log("ws attempted but no output; using synthetic fallback");
+    } else {
+      this.log("ws unreachable and cli unavailable; using synthetic fallback");
+    }
+    const synthetic = `Minitron received: ${content}`;
+    for (const word of synthetic.split(" ")) {
       await new Promise((resolve) => setTimeout(resolve, 35));
       yield { text: `${word} ` };
     }
-
     yield { text: "", done: true };
   }
 
@@ -86,10 +119,14 @@ export class OpenClawGateway {
       const timer = setTimeout(() => reject(new Error("Gateway connect timeout")), 1200);
       socket.once("open", () => {
         clearTimeout(timer);
+        this.connected = true;
+        this.log(`ws-open ${this.endpoint}`);
         resolve();
       });
       socket.once("error", (error) => {
         clearTimeout(timer);
+        this.connected = false;
+        this.log(`ws-error ${error.message}`);
         reject(error);
       });
     });
@@ -121,6 +158,7 @@ export class OpenClawGateway {
     });
 
     socket.once("error", () => {
+      this.connected = false;
       errored = true;
       queue.push({ type: "error", message: "Gateway stream error" });
     });
@@ -151,14 +189,11 @@ export class OpenClawGateway {
       await new Promise((resolve) => setTimeout(resolve, 30));
     }
 
+    this.connected = false;
     socket.close();
   }
 
   async healthCheck(): Promise<boolean> {
-    if (this.healthy) {
-      return true;
-    }
-
     try {
       type WsLike = {
         close(): void;
@@ -184,19 +219,74 @@ export class OpenClawGateway {
 
         socket.once("open", () => {
           clearTimeout(timer);
+          this.connected = true;
           socket.close();
           resolve();
         });
         socket.once("error", (error) => {
           clearTimeout(timer);
+          this.connected = false;
           reject(error);
         });
       });
       this.healthy = true;
+      this.log(`health-ok ${this.endpoint}`);
       return true;
-    } catch {
+    } catch (error) {
       this.healthy = false;
+      this.connected = false;
+      this.log(`health-failed ${error instanceof Error ? error.message : "unknown"}`);
       return false;
     }
+  }
+
+  private log(message: string): void {
+    // eslint-disable-next-line no-console
+    console.log(`[openclaw-gateway] ${message}`);
+  }
+
+  private sendViaCli(
+    sessionId: string,
+    content: string,
+  ): Promise<{ ok: boolean; text: string; error?: string }> {
+    return new Promise((resolve) => {
+      const vendorDir = path.resolve(process.cwd(), "vendor", "openclaw");
+      const child = spawn(
+        "npx",
+        ["openclaw", "agent", "--session-id", sessionId, "--message", content, "--thinking", "low"],
+        {
+          cwd: vendorDir,
+          shell: process.platform === "win32",
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk: Buffer | string) => {
+        stdout += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
+      });
+      child.stderr.on("data", (chunk: Buffer | string) => {
+        stderr += Buffer.isBuffer(chunk) ? chunk.toString("utf8") : chunk;
+      });
+
+      child.once("error", (error) => {
+        this.log(`cli-spawn-error: ${error.message}`);
+        resolve({ ok: false, text: "", error: error.message });
+      });
+
+      child.once("close", (code) => {
+        const text = stdout.trim();
+        const err = stderr.trim();
+        if (code === 0 && text.length > 0) {
+          this.log("cli-response-ok");
+          resolve({ ok: true, text });
+          return;
+        }
+        const merged = [text, err].filter(Boolean).join("\n").trim();
+        this.log(`cli-response-failed code=${String(code ?? "null")}`);
+        resolve({ ok: false, text: "", error: merged || "OpenClaw CLI request failed." });
+      });
+    });
   }
 }
