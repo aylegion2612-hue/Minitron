@@ -1,46 +1,17 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import path from "node:path";
-import { isCogneeAvailable } from "./cognee-client";
+import { getCogneeRuntimeStatus, isCogneeAvailable } from "./cognee-client";
 
-let sidecar: ChildProcess | null = null;
 let monitorTimer: NodeJS.Timeout | null = null;
-let lastStartAt: string | null = null;
 let restartCount = 0;
 
-function spawnSidecar(): void {
-  const sidecarScript = path.resolve(process.cwd(), "sidecars", "cognee", "run.py");
-  const pythonCmd = process.env.COGNEE_PYTHON_CMD ?? "python";
-  sidecar = spawn(pythonCmd, [sidecarScript], {
-    stdio: "ignore",
-    shell: false,
-    detached: false,
-  });
-  lastStartAt = new Date().toISOString();
-  sidecar.on("exit", () => {
-    sidecar = null;
-  });
-}
-
 export async function ensureCogneeSidecar(): Promise<void> {
-  const available = await isCogneeAvailable();
-  if (!available && !sidecar) {
-    try {
-      spawnSidecar();
-    } catch {
-      // Ignore start failures; higher layers degrade to SQLite.
-    }
-  }
+  // Stdio MCP transport spawns the sidecar process lazily on first client connect.
+  void isCogneeAvailable();
 
   if (!monitorTimer) {
     monitorTimer = setInterval(async () => {
       const alive = await isCogneeAvailable();
       if (!alive) {
-        try {
-          spawnSidecar();
-          restartCount += 1;
-        } catch {
-          // Continue graceful degradation.
-        }
+        restartCount += 1;
       }
     }, 30_000);
   }
@@ -52,10 +23,11 @@ export function getSidecarStatus(): {
   lastStartAt: string | null;
   restartCount: number;
 } {
+  const runtime = getCogneeRuntimeStatus();
   return {
-    running: Boolean(sidecar && !sidecar.killed),
-    pid: sidecar?.pid ?? null,
-    lastStartAt,
+    running: runtime.connected,
+    pid: runtime.pid,
+    lastStartAt: runtime.connectedAt,
     restartCount,
   };
 }

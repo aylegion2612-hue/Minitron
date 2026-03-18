@@ -25,6 +25,7 @@
     "dev:core": "tsx watch core/index.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "better-sqlite3": "^12.8.0",
     "cors": "^2.8.5",
     "electron-updater": "^6.3.9",

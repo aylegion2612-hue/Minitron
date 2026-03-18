@@ -3,4 +3,5 @@ vendor/openclaw/node_modules/
 dist/
 release/
 data/
+sidecars/cognee/venv/
 *.log
