@@ -11,7 +11,7 @@ import { resolveSandbox } from "../../security/sandbox";
 const chatSchema = z.object({
   sessionId: z.string().min(1),
   sender: z.string().min(1).default("local-user"),
-  content: z.string().min(1),
+  message: z.string().min(1),
   confirmedRuleIds: z.array(z.string()).optional(),
   requestedTool: z.string().optional(),
   sandboxLevel: z.enum(["standard", "strict", "open"]).optional(),
@@ -40,7 +40,8 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
   }
 
-  const { sessionId, sender, content, confirmedRuleIds, requestedTool, sandboxLevel } = parsed.data;
+  const { sessionId, sender, message, confirmedRuleIds, requestedTool, sandboxLevel } = parsed.data;
+  const content = message;
   const validation = validateRequest({
     content,
     sender,

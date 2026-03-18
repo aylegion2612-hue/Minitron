@@ -7,8 +7,7 @@ import { writeAuditLog } from "../../security/auditor";
 const router = Router();
 
 const createRuleSchema = z.object({
-  name: z.string().min(1),
-  input: z.string().min(1),
+  text: z.string().min(1),
 });
 const updateRuleSchema = z.object({
   name: z.string().min(1).optional(),
@@ -26,14 +25,16 @@ router.post("/", (req, res) => {
     return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
   }
 
-  const structured = parseNaturalLanguageRule(parsed.data.input);
-  const id = createRule(parsed.data.name, structured);
+  const input = parsed.data.text.trim();
+  const structured = parseNaturalLanguageRule(input);
+  const generatedName = `Rule: ${input.slice(0, 60)}`;
+  const id = createRule(generatedName, structured);
   writeAuditLog({
     action: "rule.created",
     actor: "local-user",
-    metadata: { id, name: parsed.data.name, structured },
+    metadata: { id, name: generatedName, input, structured },
   });
-  return res.status(201).json({ id, structured });
+  return res.status(200).json({ id, name: generatedName, structured });
 });
 
 router.patch("/:id", (req, res) => {

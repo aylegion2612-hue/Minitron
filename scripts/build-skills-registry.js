@@ -8,18 +8,47 @@ function slugify(name) {
 function extractSkillsFromMarkdown(markdown) {
   const lines = markdown.split(/\r?\n/);
   const skills = [];
+  const seen = new Set();
+  let category = "community";
+  let insideSkills = false;
 
   for (const line of lines) {
-    // Matches list items like: - [Skill Name](url) - description
-    const m = line.match(/^\s*[-*]\s+\[([^\]]+)\]\(([^)]+)\)\s*-?\s*(.*)$/);
+    if (line.includes("<details")) {
+      insideSkills = true;
+    }
+
+    const categoryMatch = line.match(/<summary><h3[^>]*>([^<]+)<\/h3><\/summary>/i);
+    if (categoryMatch) {
+      category = slugify(categoryMatch[1].trim());
+      continue;
+    }
+
+    if (!insideSkills) {
+      continue;
+    }
+
+    // Matches list items like: - [Skill Name](https://clawskills.sh/skills/owner-skill) - description
+    const m = line.match(/^\s*[-*]\s+\[([^\]]+)\]\((https?:\/\/[^)]+)\)\s*-?\s*(.*)$/);
     if (!m) continue;
+
     const name = m[1].trim();
     const sourceUrl = m[2].trim();
+    if (!sourceUrl.includes("clawskills.sh/skills/")) {
+      continue;
+    }
+
+    const urlSlugMatch = sourceUrl.match(/\/skills\/([^/?#)]+)/i);
+    const slug = urlSlugMatch ? urlSlugMatch[1].toLowerCase() : slugify(name);
+    if (seen.has(slug)) {
+      continue;
+    }
+    seen.add(slug);
+
     const description = (m[3] || "Imported from awesome skills list.").trim();
     skills.push({
-      slug: slugify(name),
+      slug,
       name,
-      category: "community",
+      category,
       description,
       version: "1.0.0",
       sourceUrl,
